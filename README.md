@@ -93,6 +93,8 @@ Outputs the Time-to-division prediction CSV, one row per cell sequence:
 | gt_remain_len / pred_remain_len | ground-truth / predicted remaining frames |
 | diff | predicted − ground truth |
 
+the released model checkpoint including NPME, transformer can be found [here]((https://doi.org/10.6084/m9.figshare.34045845))
+
 ## Training (optional)
 
 ```bash
