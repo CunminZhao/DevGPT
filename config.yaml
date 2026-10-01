@@ -1,0 +1,67 @@
+# DevGPT run configuration: settings you typically change per run (paths, switches).
+# This file inherits base.yaml; only override what differs. All entry scripts read this file.
+#
+# Replace every "your/path/to/..." placeholder with an actual path on your machine.
+#
+# Pipeline: ternary voxel .npy --(npme)--> per-frame Cell Token embeddings
+#           --(merge by lineage)--> per-cell sequence .npy --(transformer)--> tasks
+
+inherits: base.yaml
+
+# Active task: exactly one of "fate" or "cycle".
+# - inference scripts refuse to run when task does not match, so only one CSV type is produced;
+# - embed2seq exclude_fates defaults derive from it (fate -> [Unspecified, Other]; cycle -> no filter).
+task: fate
+
+npme:
+  train_dir: your/path/to/aligned_voxel_npy/train/
+  val_dir: your/path/to/aligned_voxel_npy/val/
+  checkpoint_dir: your/path/to/DevGPT/checkpoint/npme/
+  resume_checkpoint: ''  # optional checkpoint to resume from; '' trains from scratch
+
+embed2seq:
+  # Two-step voxel -> sequence pipeline:
+  #   1) inference/infer_npme.py:      raw_dir -> embedding_dir  (per-frame (32,4,4,4) .npy)
+  #   2) inference/embed2sequence.py:  embedding_dir -> output_dir (per-cell (T,32,4,4,4) .npy)
+  raw_dir: your/path/to/voxel_npy/
+  embedding_dir: your/path/to/frame_embeddings/
+  output_dir: your/path/to/cell_sequences/
+  # exclude_fates is omitted by default and derived from task:
+  #   task: fate  -> [Unspecified, Other]
+  #   task: cycle -> [] (no filtering)
+  # Set it explicitly here to override the task default.
+
+data:
+  # Directory of per-cell 4D embedding sequences (.npy per cell; fate label encoded in file name)
+  train_dir: your/path/to/cell_sequences/finetune/
+  # Optional separate directory for cell-cycle finetuning; empty string reuses train_dir
+  cellcycle_train_dir: ''
+
+pretrain:
+  # Where the pretrained NTP backbone is saved
+  save_path: your/path/to/DevGPT/checkpoint/pretrain/best_backbone.pt
+
+finetune4cellfate:
+  pretrained_path: your/path/to/DevGPT/checkpoint/pretrain/best_backbone.pt
+  save_path: your/path/to/DevGPT/checkpoint/finetune4cellfate/best_model.pt
+
+inference4cellfate:
+  checkpoint_path: your/path/to/DevGPT/checkpoint/finetune4cellfate/best_model.pt
+  # Directory of held-out test embedding sequences (.npy per cell)
+  test_dir: your/path/to/cell_sequences/WT_Sample6/
+  output_csv: your/path/to/inference/WT_Sample6/predictions.csv
+  # Channel-attention export is disabled by default; set an output directory to enable
+  attention_output_dir: ''
+  timepoint_predictions_enabled: false
+  timepoint_predictions_output_dir: your/path/to/timepoint_predictions/WT_Sample6
+
+finetune4cellcycle:
+  pretrained_path: your/path/to/DevGPT/checkpoint/pretrain/best_backbone.pt
+  save_path: your/path/to/DevGPT/checkpoint/finetune4cellcycle/best_model.pt
+
+inference4cellcycle:
+  checkpoint_path: your/path/to/DevGPT/checkpoint/finetune4cellcycle/best_model.pt
+  test_dir: your/path/to/cell_sequences_fullcycle/WT_Sample06
+  output_csv: your/path/to/inference_results/WT06_regression.csv
+  # Channel-attention export is disabled by default; set an output directory to enable
+  attention_output_dir: ''
